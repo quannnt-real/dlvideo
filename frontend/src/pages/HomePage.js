@@ -46,7 +46,7 @@ const HomePage = () => {
 
   const handleDownload = async () => {
     if (!selectedFormat) {
-      toast.error("Vui lòng chọn chất lượng video");
+      toast.error("Vui lòng chọn chất lượng");
       return;
     }
 
@@ -55,10 +55,18 @@ const HomePage = () => {
     setDownloadStatus("Đang khởi tạo...");
 
     try {
+      // Determine download type based on selected format
+      const isAudioFormat = selectedFormat.includes("MP3") || selectedFormat.includes("Audio");
+      const type = isAudioFormat ? "audio" : "video";
+      
       // Create download request
       const response = await axios.post(
         `${API}/download`,
-        { url, format_id: selectedFormat },
+        { 
+          url, 
+          format_id: selectedFormat,
+          download_type: type
+        },
         {
           responseType: 'blob',
           onDownloadProgress: (progressEvent) => {
@@ -72,11 +80,13 @@ const HomePage = () => {
       );
 
       // Create blob and download
-      const blob = new Blob([response.data], { type: 'video/mp4' });
+      const fileExt = type === "audio" ? "mp3" : "mp4";
+      const mimeType = type === "audio" ? "audio/mpeg" : "video/mp4";
+      const blob = new Blob([response.data], { type: mimeType });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = `${videoInfo.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp4`;
+      link.download = `${videoInfo.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${fileExt}`;
       document.body.appendChild(link);
       link.click();
       link.remove();
