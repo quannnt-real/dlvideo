@@ -1,0 +1,46 @@
+{
+  "summary": {
+    "total_tests": 6,
+    "passed_tests": 6,
+    "success_rate": 100.0,
+    "timestamp": "2025-10-22T08:39:28.222784"
+  },
+  "detailed_results": [
+    {
+      "test": "API Root Endpoint",
+      "success": true,
+      "details": "Status: 200, Response: {\"message\":\"Video Downloader API\"}",
+      "timestamp": "2025-10-22T08:39:09.116665"
+    },
+    {
+      "test": "POST /status",
+      "success": true,
+      "details": "Created status with ID: 77519e52-719f-4e44-8793-f44215fa130f",
+      "timestamp": "2025-10-22T08:39:09.318491"
+    },
+    {
+      "test": "GET /status",
+      "success": true,
+      "details": "Retrieved 1 status records",
+      "timestamp": "2025-10-22T08:39:09.450202"
+    },
+    {
+      "test": "Video Analysis",
+      "success": true,
+      "details": "Title: Me at the zoo..., Source: Youtube, Formats: 2",
+      "timestamp": "2025-10-22T08:39:17.349401"
+    },
+    {
+      "test": "Video Download",
+      "success": true,
+      "details": "Download started successfully, Content-Type: video/mp4",
+      "timestamp": "2025-10-22T08:39:27.083469"
+    },
+    {
+      "test": "Invalid URL Handling",
+      "success": true,
+      "details": "Tested multiple invalid URLs",
+      "timestamp": "2025-10-22T08:39:28.219272"
+    }
+  ]
+}
