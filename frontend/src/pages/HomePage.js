@@ -19,6 +19,7 @@ const HomePage = () => {
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [downloadStatus, setDownloadStatus] = useState("");
+  const [downloadType, setDownloadType] = useState("video"); // "video" or "audio"
 
   const handleAnalyze = async () => {
     if (!url.trim()) {
