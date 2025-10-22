@@ -36,7 +36,8 @@ const HomePage = () => {
       toast.success("Phân tích video thành công!");
     } catch (error) {
       console.error("Analysis error:", error);
-      toast.error(error.response?.data?.detail || "Không thể phân tích video. Vui lòng kiểm tra URL.");
+      const errorMsg = error.response?.data?.detail || "Không thể phân tích video. Vui lòng kiểm tra URL.";
+      toast.error(errorMsg, { duration: 5000 });
     } finally {
       setLoading(false);
     }
