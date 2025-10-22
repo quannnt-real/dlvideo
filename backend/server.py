@@ -266,8 +266,8 @@ async def analyze_video(request: VideoAnalyzeRequest):
             format_note = fmt.get('format_note', '')
             abr = fmt.get('abr', 0)  # Audio bitrate
             
-            has_video = vcodec != 'none' and height
-            has_audio = acodec != 'none'
+            has_video = bool(vcodec != 'none' and height)
+            has_audio = bool(acodec != 'none')
             
             # Audio only formats
             if not has_video and has_audio:
