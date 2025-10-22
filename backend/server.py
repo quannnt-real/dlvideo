@@ -69,6 +69,13 @@ class VideoInfo(BaseModel):
     duration: Optional[int] = None
     source: str
     formats: List[VideoFormat]
+    
+    @classmethod
+    def model_validate(cls, obj):
+        # Convert float duration to int
+        if 'duration' in obj and isinstance(obj['duration'], float):
+            obj['duration'] = int(obj['duration'])
+        return super().model_validate(obj)
 
 class DownloadRequest(BaseModel):
     url: str
