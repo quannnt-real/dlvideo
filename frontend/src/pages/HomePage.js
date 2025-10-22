@@ -211,13 +211,13 @@ const HomePage = () => {
               {/* Format Selection */}
               <div className="space-y-4">
                 <label className="text-sm font-medium text-slate-300" data-testid="quality-label">
-                  Chọn chất lượng video:
+                  Chọn chất lượng tải xuống:
                 </label>
                 <Select value={selectedFormat} onValueChange={setSelectedFormat}>
                   <SelectTrigger data-testid="quality-selector" className="bg-slate-900/50 border-slate-600 text-slate-100">
                     <SelectValue placeholder="Chọn chất lượng..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700">
+                  <SelectContent className="bg-slate-900 border-slate-700 max-h-80">
                     {videoInfo.formats.map((format) => (
                       <SelectItem
                         key={format.format_id}
@@ -225,10 +225,10 @@ const HomePage = () => {
                         data-testid={`quality-option-${format.quality}`}
                         className="text-slate-100 hover:bg-slate-800 focus:bg-slate-800"
                       >
-                        <div className="flex justify-between items-center w-full">
+                        <div className="flex justify-between items-center w-full gap-3">
                           <span className="font-medium">{format.quality}</span>
-                          <span className="text-slate-400 text-sm ml-4">
-                            {format.resolution} • {format.filesize}
+                          <span className="text-slate-400 text-sm">
+                            {format.resolution && `${format.resolution} • `}{format.filesize}
                           </span>
                         </div>
                       </SelectItem>
