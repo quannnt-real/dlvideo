@@ -249,12 +249,14 @@ async def analyze_video(request: VideoAnalyzeRequest):
         # Extract source platform
         source = info.get('extractor_key', 'Unknown')
         
-        # Parse formats and prioritize formats with both video+audio
+        # Parse formats and create smart combinations
         formats_list = []
         audio_formats = []
+        video_only_formats = []
         seen_qualities = set()
+        best_audio_id = None
         
-        # Separate video and audio formats
+        # First pass: identify all formats
         for fmt in info.get('formats', []):
             format_id = fmt.get('format_id')
             height = fmt.get('height')
@@ -269,7 +271,7 @@ async def analyze_video(request: VideoAnalyzeRequest):
             has_video = bool(vcodec != 'none' and height)
             has_audio = bool(acodec != 'none')
             
-            # Audio only formats
+            # Collect audio only formats
             if not has_video and has_audio:
                 audio_formats.append({
                     'format_id': format_id,
@@ -290,43 +292,81 @@ async def analyze_video(request: VideoAnalyzeRequest):
             if fps and fps > 30:
                 quality += f" {fps}fps"
             
-            # Add audio indicator
-            audio_indicator = " (có âm thanh)" if has_audio else " (không có âm thanh)"
-            quality_display = quality + audio_indicator
-            
-            # Prefer formats with audio - use different quality key
             quality_key = f"{height}_{has_audio}"
             if quality_key in seen_qualities:
                 continue
-            
             seen_qualities.add(quality_key)
             
-            formats_list.append(VideoFormat(
-                format_id=format_id,
-                quality=quality_display,
-                resolution=f"{fmt.get('width', 0)}x{height}",
-                fps=fps,
-                filesize=format_filesize(filesize) if filesize else "Unknown",
-                ext=ext,
-                vcodec=vcodec,
-                acodec=acodec if acodec != 'none' else None,
-                has_audio=has_audio,
-                has_video=has_video,
-                format_note=format_note
-            ))
+            # Store video info
+            video_info = {
+                'format_id': format_id,
+                'quality': quality,
+                'resolution': f"{fmt.get('width', 0)}x{height}",
+                'fps': fps,
+                'filesize': filesize,
+                'ext': ext,
+                'vcodec': vcodec,
+                'acodec': acodec if acodec != 'none' else None,
+                'has_audio': has_audio,
+                'has_video': has_video,
+                'height': height,
+                'format_note': format_note
+            }
+            
+            if has_audio:
+                # Format with both video and audio
+                formats_list.append(VideoFormat(
+                    format_id=format_id,
+                    quality=f"{quality} (có âm thanh)",
+                    resolution=video_info['resolution'],
+                    fps=fps,
+                    filesize=format_filesize(filesize) if filesize else "Unknown",
+                    ext=ext,
+                    vcodec=vcodec,
+                    acodec=acodec,
+                    has_audio=True,
+                    has_video=True,
+                    format_note=format_note
+                ))
+            else:
+                # Video only - store for potential merging
+                video_only_formats.append(video_info)
         
-        # Sort: prioritize formats WITH audio, then by resolution
+        # Get best audio format for merging
+        if audio_formats:
+            audio_formats.sort(key=lambda x: x['abr'], reverse=True)
+            best_audio_id = audio_formats[0]['format_id']
+        
+        # Add video-only formats with auto-merge instruction
+        for vid_fmt in video_only_formats:
+            if best_audio_id:
+                # Create merged format ID
+                merged_format_id = f"{vid_fmt['format_id']}+{best_audio_id}"
+                formats_list.append(VideoFormat(
+                    format_id=merged_format_id,
+                    quality=f"{vid_fmt['quality']} (có âm thanh)",
+                    resolution=vid_fmt['resolution'],
+                    fps=vid_fmt['fps'],
+                    filesize=format_filesize(vid_fmt['filesize']) if vid_fmt['filesize'] else "Unknown",
+                    ext='mp4',
+                    vcodec=vid_fmt['vcodec'],
+                    acodec=audio_formats[0]['acodec'] if audio_formats else None,
+                    has_audio=True,
+                    has_video=True,
+                    format_note="Auto-merged"
+                ))
+        
+        # Sort by has_audio first, then resolution
         formats_list.sort(
             key=lambda x: (
-                x.has_audio,  # Formats with audio first
-                int(x.quality.split('p')[0]) if 'p' in x.quality else 0  # Then by resolution
+                x.has_audio,
+                int(x.quality.split('p')[0]) if 'p' in x.quality else 0
             ),
             reverse=True
         )
         
-        # Add best audio formats
-        audio_formats.sort(key=lambda x: x['abr'], reverse=True)
-        for audio_fmt in audio_formats[:3]:  # Top 3 audio qualities
+        # Add audio-only MP3 options
+        for audio_fmt in audio_formats[:3]:
             formats_list.append(VideoFormat(
                 format_id=audio_fmt['format_id'],
                 quality=f"MP3 - {audio_fmt['quality']}",
