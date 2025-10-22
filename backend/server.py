@@ -231,11 +231,12 @@ async def analyze_video(request: VideoAnalyzeRequest):
         # Extract source platform
         source = info.get('extractor_key', 'Unknown')
         
-        # Parse formats and filter for best quality video+audio combinations
+        # Parse formats and prioritize formats with both video+audio
         formats_list = []
+        audio_formats = []
         seen_qualities = set()
         
-        # Get formats with both video and audio, or best separate streams
+        # Separate video and audio formats
         for fmt in info.get('formats', []):
             format_id = fmt.get('format_id')
             height = fmt.get('height')
@@ -244,9 +245,26 @@ async def analyze_video(request: VideoAnalyzeRequest):
             acodec = fmt.get('acodec', 'none')
             filesize = fmt.get('filesize')
             ext = fmt.get('ext', 'mp4')
+            format_note = fmt.get('format_note', '')
+            abr = fmt.get('abr', 0)  # Audio bitrate
+            
+            has_video = vcodec != 'none' and height
+            has_audio = acodec != 'none'
+            
+            # Audio only formats
+            if not has_video and has_audio:
+                audio_formats.append({
+                    'format_id': format_id,
+                    'quality': f"{int(abr)}kbps" if abr else "Audio",
+                    'ext': ext,
+                    'acodec': acodec,
+                    'filesize': filesize,
+                    'abr': abr or 0
+                })
+                continue
             
             # Skip formats without video
-            if not height or vcodec == 'none':
+            if not has_video:
                 continue
             
             # Create quality label
@@ -254,28 +272,56 @@ async def analyze_video(request: VideoAnalyzeRequest):
             if fps and fps > 30:
                 quality += f" {fps}fps"
             
-            # Avoid duplicates
-            if quality in seen_qualities:
+            # Add audio indicator
+            audio_indicator = " (có âm thanh)" if has_audio else " (không có âm thanh)"
+            quality_display = quality + audio_indicator
+            
+            # Prefer formats with audio - use different quality key
+            quality_key = f"{height}_{has_audio}"
+            if quality_key in seen_qualities:
                 continue
             
-            seen_qualities.add(quality)
+            seen_qualities.add(quality_key)
             
             formats_list.append(VideoFormat(
                 format_id=format_id,
-                quality=quality,
+                quality=quality_display,
                 resolution=f"{fmt.get('width', 0)}x{height}",
                 fps=fps,
                 filesize=format_filesize(filesize) if filesize else "Unknown",
                 ext=ext,
                 vcodec=vcodec,
-                acodec=acodec if acodec != 'none' else None
+                acodec=acodec if acodec != 'none' else None,
+                has_audio=has_audio,
+                has_video=has_video,
+                format_note=format_note
             ))
         
-        # Sort by resolution (descending)
+        # Sort: prioritize formats WITH audio, then by resolution
         formats_list.sort(
-            key=lambda x: int(x.quality.split('p')[0]) if 'p' in x.quality else 0,
+            key=lambda x: (
+                x.has_audio,  # Formats with audio first
+                int(x.quality.split('p')[0]) if 'p' in x.quality else 0  # Then by resolution
+            ),
             reverse=True
         )
+        
+        # Add best audio formats
+        audio_formats.sort(key=lambda x: x['abr'], reverse=True)
+        for audio_fmt in audio_formats[:3]:  # Top 3 audio qualities
+            formats_list.append(VideoFormat(
+                format_id=audio_fmt['format_id'],
+                quality=f"MP3 - {audio_fmt['quality']}",
+                resolution=None,
+                fps=None,
+                filesize=format_filesize(audio_fmt['filesize']) if audio_fmt['filesize'] else "Unknown",
+                ext='mp3',
+                vcodec=None,
+                acodec=audio_fmt['acodec'],
+                has_audio=True,
+                has_video=False,
+                format_note="Audio only"
+            ))
         
         # Convert duration to int if float
         duration = info.get('duration')
