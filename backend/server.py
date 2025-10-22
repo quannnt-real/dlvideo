@@ -62,6 +62,9 @@ class VideoFormat(BaseModel):
     ext: str
     vcodec: Optional[str] = None
     acodec: Optional[str] = None
+    has_audio: bool = False
+    has_video: bool = True
+    format_note: Optional[str] = None
 
 class VideoInfo(BaseModel):
     title: str
