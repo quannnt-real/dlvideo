@@ -250,7 +250,7 @@ const HomePage = () => {
                   ) : (
                     <>
                       <Download className="w-5 h-5 mr-2" />
-                      Tải xuống video
+                      {selectedFormat && selectedFormat.includes("MP3") ? "Tải xuống MP3" : "Tải xuống video"}
                     </>
                   )}
                 </Button>
