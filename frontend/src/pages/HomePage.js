@@ -92,7 +92,8 @@ const HomePage = () => {
       }, 2000);
     } catch (error) {
       console.error("Download error:", error);
-      toast.error(error.response?.data?.detail || "Tải xuống thất bại. Vui lòng thử lại.");
+      const errorMsg = error.response?.data?.detail || "Tải xuống thất bại. Vui lòng thử lại.";
+      toast.error(errorMsg, { duration: 5000 });
       setDownloading(false);
       setProgress(0);
       setDownloadStatus("");
