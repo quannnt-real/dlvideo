@@ -148,8 +148,8 @@ def progress_hook(d, task_id):
         }
 
 
-def download_video(url: str, format_id: str, task_id: str, output_path: str):
-    """Download video using yt-dlp with ffmpeg merging"""
+def download_video(url: str, format_id: str, task_id: str, output_path: str, download_type: str = "video"):
+    """Download video or audio using yt-dlp with smart merging"""
     download_progress[task_id] = {
         'progress': 0,
         'status': 'starting',
@@ -157,19 +157,37 @@ def download_video(url: str, format_id: str, task_id: str, output_path: str):
         'eta': None
     }
     
+    # Base options
     ydl_opts = {
-        'format': format_id,
         'outtmpl': output_path,
         'progress_hooks': [lambda d: progress_hook(d, task_id)],
-        'merge_output_format': 'mp4',
-        'postprocessor_args': [
-            '-c:v', 'copy',
-            '-c:a', 'aac',
-            '-strict', 'experimental'
-        ],
         'prefer_ffmpeg': True,
         'quiet': False,
     }
+    
+    if download_type == "audio":
+        # Audio only download - convert to MP3
+        ydl_opts.update({
+            'format': format_id,
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+        })
+    else:
+        # Video download with smart format selection
+        # If format_id has audio, use it directly
+        # Otherwise, let yt-dlp auto-merge best video+audio
+        if '+' in format_id:
+            # Manual format combination (e.g., "137+140")
+            ydl_opts['format'] = format_id
+        else:
+            # Single format - check if it needs audio
+            # Use bestvideo+bestaudio merge if format doesn't have audio
+            ydl_opts['format'] = f"{format_id}+bestaudio/best"
+        
+        ydl_opts['merge_output_format'] = 'mp4'
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
