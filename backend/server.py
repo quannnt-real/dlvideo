@@ -362,13 +362,13 @@ async def analyze_video(request: VideoAnalyzeRequest):
 
 @api_router.post("/download")
 async def download_video_endpoint(request: DownloadRequest):
-    """Download video and stream it back"""
+    """Download video or audio and stream it back"""
     task_id = str(uuid.uuid4())
     
     try:
         # Create temporary directory for this download
         temp_dir = tempfile.mkdtemp()
-        output_template = os.path.join(temp_dir, 'video.%(ext)s')
+        output_template = os.path.join(temp_dir, 'download.%(ext)s')
         
         # Start download in thread pool
         loop = asyncio.get_event_loop()
@@ -378,7 +378,8 @@ async def download_video_endpoint(request: DownloadRequest):
             request.url,
             request.format_id,
             task_id,
-            output_template
+            output_template,
+            request.download_type
         )
         
         if not success:
@@ -386,16 +387,25 @@ async def download_video_endpoint(request: DownloadRequest):
             raise HTTPException(status_code=500, detail="Download failed")
         
         # Find the downloaded file
-        files = list(Path(temp_dir).glob('video.*'))
+        files = list(Path(temp_dir).glob('download.*'))
         if not files:
             shutil.rmtree(temp_dir, ignore_errors=True)
             raise HTTPException(status_code=500, detail="Downloaded file not found")
         
-        video_file = files[0]
+        downloaded_file = files[0]
+        file_ext = downloaded_file.suffix
+        
+        # Determine media type and filename
+        if request.download_type == "audio" or file_ext == '.mp3':
+            media_type = "audio/mpeg"
+            filename = "audio.mp3"
+        else:
+            media_type = "video/mp4"
+            filename = "video.mp4"
         
         def file_iterator():
             try:
-                with open(video_file, 'rb') as f:
+                with open(downloaded_file, 'rb') as f:
                     while chunk := f.read(8192):
                         yield chunk
             finally:
@@ -406,9 +416,9 @@ async def download_video_endpoint(request: DownloadRequest):
         
         return StreamingResponse(
             file_iterator(),
-            media_type="video/mp4",
+            media_type=media_type,
             headers={
-                "Content-Disposition": f"attachment; filename=video.mp4"
+                "Content-Disposition": f"attachment; filename={filename}"
             }
         )
         
