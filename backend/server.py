@@ -83,6 +83,7 @@ class VideoInfo(BaseModel):
 class DownloadRequest(BaseModel):
     url: str
     format_id: str
+    download_type: str = "video"  # "video" or "audio"
 
 class ProgressResponse(BaseModel):
     progress: float
