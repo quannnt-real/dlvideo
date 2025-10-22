@@ -273,11 +273,16 @@ async def analyze_video(request: VideoAnalyzeRequest):
             reverse=True
         )
         
+        # Convert duration to int if float
+        duration = info.get('duration')
+        if duration and isinstance(duration, float):
+            duration = int(duration)
+        
         # Return top 10 formats
         return VideoInfo(
             title=info.get('title', 'Unknown'),
             thumbnail=info.get('thumbnail'),
-            duration=info.get('duration'),
+            duration=duration,
             source=source,
             formats=formats_list[:10]
         )
