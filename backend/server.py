@@ -676,41 +676,47 @@ def download_and_merge_local(url: str, video_format: str, audio_format: str, tas
             'eta': None
         }
         
+        # 🚀 STRATEGY: Try without cookies first (fastest), fallback to cookies if needed
+        browser_attempts = [
+            (None, 'No cookies', {'youtube': {'player_client': ['android', 'web']}}),
+            (None, 'Android client', {'youtube': {'player_client': ['android']}}),
+            (None, 'iOS client', {'youtube': {'player_client': ['ios']}}),
+            ('firefox', 'Firefox cookies', {'youtube': {'player_client': ['web']}}),
+            ('chrome', 'Chrome cookies', {'youtube': {'player_client': ['web']}}),
+        ]
+        
         video_opts = {
             'format': video_format,
             'outtmpl': video_file + '.%(ext)s',
             'quiet': True,
             'no_warnings': True,
-            # 🔥 Add cookies support to bypass 403 Forbidden
-            'cookiesfrombrowser': ('firefox',),  # Try Firefox cookies first
-            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},  # Use mobile client
         }
         
-        # Try with Firefox cookies, fallback to Chrome, then no cookies
-        browser_attempts = [
-            ('firefox', 'Firefox'),
-            ('chrome', 'Chrome'),
-            (None, 'No cookies')
-        ]
-        
         video_downloaded = False
-        for browser, browser_name in browser_attempts:
+        video_ext = None
+        for browser, browser_name, extractor_args in browser_attempts:
+            # Configure options for this attempt
             if browser:
                 video_opts['cookiesfrombrowser'] = (browser,)
-                logger.info(f"🍪 Trying {browser_name} cookies...")
             else:
                 video_opts.pop('cookiesfrombrowser', None)
-                logger.info(f"🔓 Trying without cookies...")
+            
+            video_opts['extractor_args'] = extractor_args
+            logger.info(f"🔄 Attempting: {browser_name}...")
             
             try:
                 with yt_dlp.YoutubeDL(video_opts) as ydl:
                     info = ydl.extract_info(url, download=True)
                     video_ext = info.get('ext', 'webm')
                     video_downloaded = True
-                    logger.info(f"✅ Video downloaded using {browser_name}")
+                    logger.info(f"✅ Video downloaded successfully using: {browser_name}")
                     break
             except Exception as e:
-                logger.warning(f"⚠️ Failed with {browser_name}: {str(e)[:100]}")
+                error_msg = str(e)
+                if '403' in error_msg or 'Forbidden' in error_msg:
+                    logger.warning(f"⚠️ {browser_name} blocked (403) - trying next strategy...")
+                else:
+                    logger.warning(f"⚠️ {browser_name} failed: {error_msg[:80]}...")
                 continue
         
         if not video_downloaded:
@@ -735,17 +741,18 @@ def download_and_merge_local(url: str, video_format: str, audio_format: str, tas
             'outtmpl': audio_file + '.%(ext)s',
             'quiet': True,
             'no_warnings': True,
-            # 🔥 Use the same browser cookies for audio
-            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
         }
         
-        # Try same browser sequence for audio
+        # Try same strategy sequence for audio
         audio_downloaded = False
-        for browser, browser_name in browser_attempts:
+        audio_ext = None
+        for browser, browser_name, extractor_args in browser_attempts:
             if browser:
                 audio_opts['cookiesfrombrowser'] = (browser,)
             else:
                 audio_opts.pop('cookiesfrombrowser', None)
+            
+            audio_opts['extractor_args'] = extractor_args
             
             try:
                 with yt_dlp.YoutubeDL(audio_opts) as ydl:
@@ -1529,12 +1536,30 @@ async def download_video_endpoint(request: DownloadRequest, background_tasks: Ba
     
     logger.info(f"📁 Temp directory: {temp_dir}")
     
+    # 🎯 Extract expected file size from format info
+    expected_size = 0
+    try:
+        # Quick info extraction to get expected size
+        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+            info = ydl.extract_info(request.url, download=False)
+            formats = info.get('formats', [])
+            
+            # Find the requested format
+            requested_fmt = next((f for f in formats if f.get('format_id') == request.format_id), None)
+            if requested_fmt:
+                expected_size = requested_fmt.get('filesize') or requested_fmt.get('filesize_approx', 0)
+                if expected_size > 0:
+                    logger.info(f"📏 Expected file size: {expected_size / (1024*1024):.1f} MB")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not get expected size: {e}")
+    
     # Store task info
     task_files[task_id] = {
         'temp_dir': temp_dir,
         'ready': False,
         'created_at': datetime.now(timezone.utc),
-        'download_type': request.download_type
+        'download_type': request.download_type,
+        'expected_size': expected_size  # 🎯 Store expected size
     }
     
     # Start download in background
@@ -1635,6 +1660,25 @@ async def check_download_status(task_id: str):
     task_info = task_files[task_id]
     progress_info = download_progress.get(task_id, {})
     
+    # 🎯 CHECK FILE SIZE - warn if suspiciously small
+    file_size = task_info.get('file_size', 0)
+    expected_size = task_info.get('expected_size', 0)  # Will be set during download
+    size_warning = None
+    
+    if task_info.get('ready') and file_size > 0:
+        file_size_mb = file_size / (1024 * 1024)
+        
+        # Warning if file is suspiciously small (< 15MB for video)
+        if file_size_mb < 15 and task_info.get('file_extension') != '.mp3':
+            size_warning = f"⚠️ Cảnh báo: File chỉ có {file_size_mb:.1f}MB - có thể chất lượng thấp hơn mong đợi"
+            logger.warning(f"🚨 {size_warning} - Task: {task_id}")
+        
+        # Warning if significantly smaller than expected
+        if expected_size > 0 and file_size < (expected_size * 0.5):
+            expected_mb = expected_size / (1024 * 1024)
+            size_warning = f"⚠️ File chỉ có {file_size_mb:.1f}MB, nhỏ hơn nhiều so với dự kiến ({expected_mb:.1f}MB)"
+            logger.warning(f"🚨 {size_warning} - Task: {task_id}")
+    
     return {
         'task_id': task_id,
         'ready': task_info.get('ready', False),
@@ -1642,7 +1686,9 @@ async def check_download_status(task_id: str):
         'status': progress_info.get('status', 'unknown'),
         'message': progress_info.get('message', ''),
         'error': task_info.get('error'),
-        'file_size': task_info.get('file_size'),
+        'file_size': file_size,
+        'file_size_mb': file_size / (1024 * 1024) if file_size > 0 else 0,
+        'size_warning': size_warning,  # 🎯 NEW: Size warning for frontend
         'download_url': f"/download/file/{task_id}",  # Relative path (API prefix added by router)
         'file_extension': task_info.get('file_extension', '.mp4')  # Return extension for frontend
     }

@@ -124,6 +124,14 @@ const HomePage = () => {
         setProgress(status.progress || 0);
         setDownloadStatus(status.message || 'Đang xử lý...');
         
+        // 🎯 Show size warning if file is suspiciously small
+        if (status.size_warning) {
+          toast.warning(status.size_warning, { 
+            duration: 8000,
+            description: "Bạn vẫn có thể tải về, nhưng có thể chất lượng không như mong đợi."
+          });
+        }
+        
         if (status.ready) {
           isReady = true;
           break;
