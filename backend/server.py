@@ -681,10 +681,41 @@ def download_and_merge_local(url: str, video_format: str, audio_format: str, tas
             'outtmpl': video_file + '.%(ext)s',
             'quiet': True,
             'no_warnings': True,
+            # 🔥 Add cookies support to bypass 403 Forbidden
+            'cookiesfrombrowser': ('firefox',),  # Try Firefox cookies first
+            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},  # Use mobile client
         }
-        with yt_dlp.YoutubeDL(video_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            video_ext = info.get('ext', 'webm')
+        
+        # Try with Firefox cookies, fallback to Chrome, then no cookies
+        browser_attempts = [
+            ('firefox', 'Firefox'),
+            ('chrome', 'Chrome'),
+            (None, 'No cookies')
+        ]
+        
+        video_downloaded = False
+        for browser, browser_name in browser_attempts:
+            if browser:
+                video_opts['cookiesfrombrowser'] = (browser,)
+                logger.info(f"🍪 Trying {browser_name} cookies...")
+            else:
+                video_opts.pop('cookiesfrombrowser', None)
+                logger.info(f"🔓 Trying without cookies...")
+            
+            try:
+                with yt_dlp.YoutubeDL(video_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    video_ext = info.get('ext', 'webm')
+                    video_downloaded = True
+                    logger.info(f"✅ Video downloaded using {browser_name}")
+                    break
+            except Exception as e:
+                logger.warning(f"⚠️ Failed with {browser_name}: {str(e)[:100]}")
+                continue
+        
+        if not video_downloaded:
+            logger.error("❌ All browser cookie attempts failed for video")
+            return None
         
         actual_video_file = f"{video_file}.{video_ext}"
         logger.info(f"✅ Video downloaded: {os.path.getsize(actual_video_file) / (1024*1024):.2f} MB ({video_ext})")
@@ -704,10 +735,30 @@ def download_and_merge_local(url: str, video_format: str, audio_format: str, tas
             'outtmpl': audio_file + '.%(ext)s',
             'quiet': True,
             'no_warnings': True,
+            # 🔥 Use the same browser cookies for audio
+            'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
         }
-        with yt_dlp.YoutubeDL(audio_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            audio_ext = info.get('ext', 'webm')
+        
+        # Try same browser sequence for audio
+        audio_downloaded = False
+        for browser, browser_name in browser_attempts:
+            if browser:
+                audio_opts['cookiesfrombrowser'] = (browser,)
+            else:
+                audio_opts.pop('cookiesfrombrowser', None)
+            
+            try:
+                with yt_dlp.YoutubeDL(audio_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    audio_ext = info.get('ext', 'webm')
+                    audio_downloaded = True
+                    break
+            except Exception as e:
+                continue
+        
+        if not audio_downloaded:
+            logger.error("❌ All browser cookie attempts failed for audio")
+            return None
         
         actual_audio_file = f"{audio_file}.{audio_ext}"
         logger.info(f"✅ Audio downloaded: {os.path.getsize(actual_audio_file) / (1024*1024):.2f} MB ({audio_ext})")
