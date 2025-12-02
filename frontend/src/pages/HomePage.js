@@ -12,9 +12,19 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Download, Loader2, Video, CheckCircle2, AlertCircle, Music, Settings, AudioWaveform, LogOut, Shield } from "lucide-react";
+import { Download, Loader2, Video, CheckCircle2, AlertCircle, Music, Settings, AudioWaveform, LogOut, Shield, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ThemeToggleSimple } from "@/components/ThemeToggle";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -31,6 +41,11 @@ const HomePage = () => {
   const [progress, setProgress] = useState(0);
   const [downloadStatus, setDownloadStatus] = useState("");
   const [downloadType, setDownloadType] = useState("video"); // "video" or "audio"
+
+  // Size warning dialog state
+  const [showSizeWarning, setShowSizeWarning] = useState(false);
+  const [sizeWarningData, setSizeWarningData] = useState(null);
+  const [pendingTaskId, setPendingTaskId] = useState(null);
 
   // Basic audio processing options
   const [audioOptions, setAudioOptions] = useState({
@@ -124,15 +139,21 @@ const HomePage = () => {
         setProgress(status.progress || 0);
         setDownloadStatus(status.message || 'Đang xử lý...');
         
-        // 🎯 Show size warning if file is suspiciously small
-        if (status.size_warning) {
-          toast.warning(status.size_warning, { 
-            duration: 8000,
-            description: "Bạn vẫn có thể tải về, nhưng có thể chất lượng không như mong đợi."
-          });
-        }
-        
         if (status.ready) {
+          // 🎯 STOP and show warning dialog if file size is suspicious
+          if (status.size_warning) {
+            console.log('⚠️ Size warning detected:', status.size_warning);
+            setSizeWarningData({
+              warning: status.size_warning,
+              fileSize: status.file_size_mb,
+              taskId: taskId
+            });
+            setPendingTaskId(taskId);
+            setShowSizeWarning(true);
+            setDownloading(false);
+            return; // Stop here, wait for user confirmation
+          }
+          
           isReady = true;
           break;
         }
@@ -257,6 +278,120 @@ const HomePage = () => {
       setProgress(0);
       setDownloadStatus("");
     }
+  };
+
+  // Handle user confirmation to download despite warning
+  const handleConfirmDownload = async () => {
+    setShowSizeWarning(false);
+    const taskId = pendingTaskId;
+    
+    if (!taskId) return;
+    
+    setDownloading(true);
+    setDownloadStatus("Đang tải file xuống...");
+    
+    try {
+      // Continue with download process
+      const finalStatus = await axios.get(
+        `${API}/download/status/${taskId}`,
+        { timeout: 10000 }
+      );
+      
+      const downloadUrl = finalStatus.data.download_url;
+      const fileExtension = finalStatus.data.file_extension || '.mp4';
+      
+      if (!downloadUrl) {
+        throw new Error('Download URL not available');
+      }
+      
+      // Create filename
+      const selectedFormatInfo = videoInfo?.formats?.find(f => f.format_id === selectedFormat);
+      const qualityLabel = selectedFormatInfo?.quality || '';
+      const cleanQuality = qualityLabel
+        .replace(/[()]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/có_âm_thanh/g, '')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '')
+        .trim();
+      
+      const originalTitle = videoInfo?.title || 'video';
+      const cleanTitle = originalTitle
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+        .replace(/[^a-zA-Z0-9\s]/g, '')
+        .trim()
+        .replace(/\s+/g, '_')
+        .toLowerCase()
+        .substring(0, 80);
+      
+      const filenameWithQuality = cleanQuality 
+        ? `${cleanTitle}_${cleanQuality}${fileExtension}`
+        : `${cleanTitle}${fileExtension}`;
+      
+      const downloadFilename = cleanTitle ? filenameWithQuality : `video${fileExtension}`;
+      const downloadUrlWithFilename = `${API}${downloadUrl}?custom_filename=${encodeURIComponent(downloadFilename)}`;
+      
+      // Trigger download
+      const link = document.createElement('a');
+      link.href = downloadUrlWithFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setProgress(100);
+      setDownloadStatus("Hoàn thành! File đang được tải xuống...");
+      toast.success("Tải xuống thành công! Kiểm tra thư mục Downloads của bạn.");
+      
+      // Cleanup after 30s
+      setTimeout(async () => {
+        try {
+          await axios.delete(`${API}/download/cleanup/${taskId}`);
+          console.log('Cleanup completed');
+        } catch (err) {
+          console.warn('Cleanup failed:', err);
+        }
+      }, 30000);
+      
+      setTimeout(() => {
+        setDownloading(false);
+        setProgress(0);
+        setDownloadStatus("");
+        setPendingTaskId(null);
+      }, 2000);
+      
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Tải xuống thất bại. Vui lòng thử lại.", { duration: 5000 });
+      setDownloading(false);
+      setProgress(0);
+      setDownloadStatus("");
+      setPendingTaskId(null);
+    }
+  };
+
+  // Handle user rejection - cleanup server files immediately
+  const handleRejectDownload = async () => {
+    setShowSizeWarning(false);
+    const taskId = pendingTaskId;
+    
+    if (taskId) {
+      try {
+        await axios.delete(`${API}/download/cleanup/${taskId}`);
+        console.log('File rejected and cleaned up:', taskId);
+        toast.info("Đã hủy tải xuống và xóa file trên server.");
+      } catch (err) {
+        console.warn('Cleanup failed:', err);
+      }
+    }
+    
+    setProgress(0);
+    setDownloadStatus("");
+    setPendingTaskId(null);
+    setSizeWarningData(null);
   };
 
   const formatDuration = (seconds) => {
@@ -738,6 +873,52 @@ const HomePage = () => {
           </Card>
         </div>
       </div>
+
+      {/* Size Warning Dialog */}
+      <AlertDialog open={showSizeWarning} onOpenChange={setShowSizeWarning}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-amber-500/10 rounded-lg">
+                <AlertTriangle className="w-6 h-6 text-amber-500" />
+              </div>
+              <AlertDialogTitle className="text-xl">Cảnh báo chất lượng file</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-base space-y-3 pt-2">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg">
+                <p className="font-medium text-amber-900 dark:text-amber-200">
+                  {sizeWarningData?.warning}
+                </p>
+              </div>
+              
+              <div className="space-y-2 text-sm">
+                <p className="flex justify-between">
+                  <span className="text-muted-foreground">Kích thước file:</span>
+                  <span className="font-semibold">{sizeWarningData?.fileSize?.toFixed(1)} MB</span>
+                </p>
+                <p className="text-muted-foreground mt-3">
+                  File này có thể không đúng với chất lượng bạn đã chọn. 
+                  Bạn vẫn có thể tải về hoặc hủy để thử lại.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel 
+              onClick={handleRejectDownload}
+              className="w-full sm:w-auto border-red-500/50 text-red-600 hover:bg-red-500/10"
+            >
+              Hủy và xóa file
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDownload}
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90"
+            >
+              Tải về dù sao
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
