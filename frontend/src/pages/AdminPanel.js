@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { ThemeToggleSimple } from '../components/ThemeToggle';
 import './AdminPanel.css';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+
 function AdminPanel() {
   const [users, setUsers] = useState([]);
   const [sessions, setSessions] = useState([]);
