@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext(null);
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -22,7 +23,7 @@ export const AuthProvider = ({ children }) => {
 
   const verifySession = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/auth/verify', {
+      const response = await fetch(`${BACKEND_URL}/api/auth/verify`, {
         credentials: 'include', // Include cookies
       });
 
@@ -47,7 +48,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      const response = await fetch('http://localhost:8000/api/auth/login', {
+      const response = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +91,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await fetch('http://localhost:8000/api/auth/logout', {
+      await fetch(`${BACKEND_URL}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -105,7 +106,7 @@ export const AuthProvider = ({ children }) => {
 
   const changePassword = async (oldPassword, newPassword) => {
     try {
-      const response = await fetch('http://localhost:8000/api/auth/change-password', {
+      const response = await fetch(`${BACKEND_URL}/api/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

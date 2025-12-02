@@ -40,7 +40,7 @@ function AdminPanel() {
 
   const loadUsers = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/auth/users', {
+      const response = await fetch(`${BACKEND_URL}/api/auth/users`, {
         credentials: 'include',
       });
 
@@ -59,7 +59,7 @@ function AdminPanel() {
 
   const loadSessions = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/auth/sessions', {
+      const response = await fetch(`${BACKEND_URL}/api/auth/sessions`, {
         credentials: 'include',
       });
 
@@ -82,7 +82,7 @@ function AdminPanel() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/users', {
+      const response = await fetch(`${BACKEND_URL}/api/auth/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ function AdminPanel() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/reset-password', {
+      const response = await fetch(`${BACKEND_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,7 +148,7 @@ function AdminPanel() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/update-username', {
+      const response = await fetch(`${BACKEND_URL}/api/auth/update-username`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -182,7 +182,7 @@ function AdminPanel() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/auth/users/${username}`, {
+      const response = await fetch(`${BACKEND_URL}/api/auth/users/${username}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -207,7 +207,7 @@ function AdminPanel() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/auth/sessions/${username}`, {
+      const response = await fetch(`${BACKEND_URL}/api/auth/sessions/${username}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -227,7 +227,7 @@ function AdminPanel() {
 
   const handleCleanupSessions = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/auth/cleanup-sessions', {
+      const response = await fetch(`${BACKEND_URL}/api/auth/cleanup-sessions`, {
         method: 'POST',
         credentials: 'include',
       });
