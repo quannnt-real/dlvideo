@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { ThemeToggleSimple } from '../components/ThemeToggle';
 import './AdminPanel.css';
 
 function AdminPanel() {
@@ -252,6 +253,11 @@ function AdminPanel() {
 
   return (
     <div className="admin-panel">
+      {/* Theme Toggle */}
+      <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 50 }}>
+        <ThemeToggleSimple />
+      </div>
+
       <div className="admin-header">
         <div>
           <h1>🔧 Admin Panel</h1>

@@ -1250,6 +1250,10 @@ async def analyze_video(request: VideoAnalyzeRequest):
         seen_qualities = set()
         best_audio_id = None
         
+        # Dictionary to store best format for each resolution
+        # Key: (height, fps_key), Value: format_info
+        best_formats_by_resolution = {}
+        
         # First pass: identify all formats
         for fmt in info.get('formats', []):
             format_id = fmt.get('format_id')
@@ -1286,12 +1290,9 @@ async def analyze_video(request: VideoAnalyzeRequest):
             if fps and fps > 30:
                 quality += f" {fps}fps"
             
-            # Include fps in quality_key to allow multiple fps variants (e.g., 4K 30fps and 4K 60fps)
+            # Key for deduplication: (height, fps)
             fps_key = fps if fps else 0
-            quality_key = f"{height}_{has_audio}_{fps_key}"
-            if quality_key in seen_qualities:
-                continue
-            seen_qualities.add(quality_key)
+            resolution_key = (height, fps_key)
             
             # Store video info
             video_info = {
@@ -1309,24 +1310,18 @@ async def analyze_video(request: VideoAnalyzeRequest):
                 'format_note': format_note
             }
             
-            if has_audio:
-                # Format with both video and audio
-                formats_list.append(VideoFormat(
-                    format_id=format_id,
-                    quality=f"{quality} (có âm thanh)",
-                    resolution=video_info['resolution'],
-                    fps=fps,
-                    filesize=format_filesize(filesize) if filesize else "Unknown",
-                    ext=ext,
-                    vcodec=vcodec,
-                    acodec=acodec,
-                    has_audio=True,
-                    has_video=True,
-                    format_note=format_note
-                ))
+            # Check if we should replace existing format for this resolution
+            # Priority: format with filesize > format without filesize
+            if resolution_key in best_formats_by_resolution:
+                existing = best_formats_by_resolution[resolution_key]
+                # Replace if: current has filesize and existing doesn't
+                if filesize and not existing['filesize']:
+                    best_formats_by_resolution[resolution_key] = video_info
+                # Or if both have/don't have filesize, prefer has_audio
+                elif (bool(filesize) == bool(existing['filesize'])) and has_audio and not existing['has_audio']:
+                    best_formats_by_resolution[resolution_key] = video_info
             else:
-                # Video only - store for potential merging
-                video_only_formats.append(video_info)
+                best_formats_by_resolution[resolution_key] = video_info
         
         # Get best audio format for merging (prefer m4a/mp4 audio for better compatibility)
         if audio_formats:
@@ -1338,44 +1333,55 @@ async def analyze_video(request: VideoAnalyzeRequest):
             best_audio_id = audio_formats[0]['format_id']
             logger.info(f"📻 Best audio format selected: {best_audio_id} ({audio_formats[0]['quality']})")
         
-        # Add video-only formats with smart format selection
-        for vid_fmt in video_only_formats:
-            # Use flexible format selector instead of hardcoded merge
-            # This allows yt-dlp to choose the best available combination
+        # Second pass: create format list from best formats
+        for resolution_key, vid_fmt in best_formats_by_resolution.items():
             format_id = vid_fmt['format_id']
             video_ext = vid_fmt['ext']
+            has_audio = vid_fmt['has_audio']
             
-            # Determine best audio based on video container
-            # WebM videos work best with opus/webm audio
-            # MP4 videos work best with m4a/aac audio
-            if video_ext == 'webm' and audio_formats:
-                # Find opus/webm audio
-                webm_audio = next((a for a in audio_formats if a['ext'] in ['webm', 'opus']), audio_formats[0])
-                best_compatible_audio = webm_audio['format_id']
-                audio_codec = webm_audio['acodec']
-            elif audio_formats:
-                # MP4 or other - use m4a audio
-                m4a_audio = next((a for a in audio_formats if a['ext'] in ['m4a', 'mp4']), audio_formats[0])
-                best_compatible_audio = m4a_audio['format_id']
-                audio_codec = m4a_audio['acodec']
+            # If format already has audio, use it directly
+            if has_audio:
+                formats_list.append(VideoFormat(
+                    format_id=format_id,
+                    quality=f"{vid_fmt['quality']}",
+                    resolution=vid_fmt['resolution'],
+                    fps=vid_fmt['fps'],
+                    filesize=format_filesize(vid_fmt['filesize']) if vid_fmt['filesize'] else "Unknown",
+                    ext=video_ext,
+                    vcodec=vid_fmt['vcodec'],
+                    acodec=vid_fmt['acodec'],
+                    has_audio=True,
+                    has_video=True,
+                    format_note=vid_fmt['format_note']
+                ))
             else:
-                best_compatible_audio = "auto"
-                audio_codec = "auto"
-            
-            # Store format with audio hint in format_note for download logic
-            formats_list.append(VideoFormat(
-                format_id=format_id,  # Store only video ID
-                quality=f"{vid_fmt['quality']} (có âm thanh)",
-                resolution=vid_fmt['resolution'],
-                fps=vid_fmt['fps'],
-                filesize=format_filesize(vid_fmt['filesize']) if vid_fmt['filesize'] else "Unknown",
-                ext=video_ext,  # Keep original ext for compatibility check
-                vcodec=vid_fmt['vcodec'],
-                acodec=audio_codec,
-                has_audio=True,
-                has_video=True,
-                format_note=f"merge_audio:{best_compatible_audio}"  # Hint for download
-            ))
+                # Video only - need to merge with audio
+                # Determine best audio based on video container
+                if video_ext == 'webm' and audio_formats:
+                    webm_audio = next((a for a in audio_formats if a['ext'] in ['webm', 'opus']), audio_formats[0])
+                    best_compatible_audio = webm_audio['format_id']
+                    audio_codec = webm_audio['acodec']
+                elif audio_formats:
+                    m4a_audio = next((a for a in audio_formats if a['ext'] in ['m4a', 'mp4']), audio_formats[0])
+                    best_compatible_audio = m4a_audio['format_id']
+                    audio_codec = m4a_audio['acodec']
+                else:
+                    best_compatible_audio = "auto"
+                    audio_codec = "auto"
+                
+                formats_list.append(VideoFormat(
+                    format_id=format_id,
+                    quality=f"{vid_fmt['quality']}",
+                    resolution=vid_fmt['resolution'],
+                    fps=vid_fmt['fps'],
+                    filesize=format_filesize(vid_fmt['filesize']) if vid_fmt['filesize'] else "Unknown",
+                    ext=video_ext,
+                    vcodec=vid_fmt['vcodec'],
+                    acodec=audio_codec,
+                    has_audio=True,
+                    has_video=True,
+                    format_note=f"merge_audio:{best_compatible_audio}"
+                ))
         
         # Sort by resolution first (prioritize 4K), then has_audio, then fps
         formats_list.sort(
@@ -1387,11 +1393,23 @@ async def analyze_video(request: VideoAnalyzeRequest):
             reverse=True
         )
         
-        # Add audio-only MP3 options
-        for audio_fmt in audio_formats[:3]:
+        # Add audio-only MP3 options (deduplicated by bitrate)
+        seen_audio_bitrates = set()
+        unique_audio_formats = []
+        for audio_fmt in audio_formats:
+            # Use bitrate as key for deduplication
+            abr_key = int(audio_fmt['abr']) if audio_fmt['abr'] else 0
+            if abr_key not in seen_audio_bitrates:
+                seen_audio_bitrates.add(abr_key)
+                unique_audio_formats.append(audio_fmt)
+        
+        # Sort by bitrate descending and take top 3 unique
+        unique_audio_formats.sort(key=lambda x: x['abr'], reverse=True)
+        for audio_fmt in unique_audio_formats[:3]:
+            bitrate_label = f"{int(audio_fmt['abr'])}kbps" if audio_fmt['abr'] else "Auto"
             formats_list.append(VideoFormat(
                 format_id=audio_fmt['format_id'],
-                quality=f"MP3 - {audio_fmt['quality']}",
+                quality=f"Audio - {bitrate_label}",
                 resolution=None,
                 fps=None,
                 filesize=format_filesize(audio_fmt['filesize']) if audio_fmt['filesize'] else "Unknown",
@@ -1400,7 +1418,7 @@ async def analyze_video(request: VideoAnalyzeRequest):
                 acodec=audio_fmt['acodec'],
                 has_audio=True,
                 has_video=False,
-                format_note="Audio only"
+                format_note=f"Audio only ({audio_fmt['ext']})"
             ))
         
         # Convert duration to int if float

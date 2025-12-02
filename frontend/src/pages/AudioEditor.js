@@ -9,7 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Upload, Loader2, Download, AudioWaveform, Scissors, Play, Pause, Volume2, Video, AlertCircle } from "lucide-react";
+import { Upload, Loader2, Download, AudioWaveform, Scissors, Play, Pause, Volume2, Video, AlertCircle, Sun, Moon } from "lucide-react";
+import { ThemeToggleSimple } from "@/components/ThemeToggle";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -329,14 +330,19 @@ const AudioEditor = () => {
   };
 
   return (
-    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-background">
       <div className="max-w-4xl mx-auto">
+        {/* Theme Toggle */}
+        <div className="fixed top-4 right-4 z-50">
+          <ThemeToggleSimple />
+        </div>
+
         {/* Navigation */}
         <div className="flex justify-center gap-4 mb-8">
           <Link to="/">
             <Button
               variant="outline"
-              className="border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+              className="border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             >
               <Video className="w-4 h-4 mr-2" />
               Video Downloader
@@ -355,22 +361,22 @@ const AudioEditor = () => {
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-6">
             <div className="p-4 bg-cyan-500/10 rounded-2xl border border-cyan-500/20 backdrop-blur-sm">
-              <AudioWaveform className="w-12 h-12 text-cyan-400" />
+              <AudioWaveform className="w-12 h-12 text-cyan-500" />
             </div>
           </div>
-          <h1 className="text-5xl sm:text-6xl font-bold mb-4 bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-500 bg-clip-text text-transparent">
+          <h1 className="text-5xl sm:text-6xl font-bold mb-4 bg-gradient-to-r from-cyan-500 via-blue-500 to-cyan-600 bg-clip-text text-transparent">
             Audio Editor Pro
           </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Tải lên, cắt, chỉnh sửa và tải xuống audio với công cụ chuyên nghiệp
           </p>
         </div>
 
         {/* Upload Card */}
-        <Card className="mb-8 bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
+        <Card className="mb-8 bg-card/80 backdrop-blur-sm shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl text-slate-100">Upload Audio/Video File</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="text-2xl text-card-foreground">Upload Audio/Video File</CardTitle>
+            <CardDescription>
               Kéo thả file vào hoặc click để chọn. Hỗ trợ cả audio và video (sẽ tự động extract audio)
             </CardDescription>
           </CardHeader>
@@ -388,7 +394,7 @@ const AudioEditor = () => {
                   relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all duration-200
                   ${isDragging
                     ? 'border-cyan-500 bg-cyan-500/10 scale-105'
-                    : 'border-slate-600 hover:border-cyan-500/50 hover:bg-slate-800/50'}
+                    : 'border-border hover:border-cyan-500/50 hover:bg-accent/50'}
                   ${(uploading || processing) ? 'opacity-50 cursor-not-allowed' : ''}
                 `}
               >
@@ -404,39 +410,39 @@ const AudioEditor = () => {
                 <div className="flex flex-col items-center gap-4">
                   {uploading ? (
                     <>
-                      <Loader2 className="w-16 h-16 text-cyan-400 animate-spin" />
+                      <Loader2 className="w-16 h-16 text-cyan-500 animate-spin" />
                       <div className="space-y-2 w-full max-w-md">
-                        <p className="text-lg font-medium text-slate-200">
+                        <p className="text-lg font-medium text-card-foreground">
                           Đang upload: {audioFileName}
                         </p>
-                        <Progress value={uploadProgress} className="h-2 bg-slate-700" />
-                        <p className="text-sm text-slate-400">{uploadProgress}%</p>
+                        <Progress value={uploadProgress} className="h-2" />
+                        <p className="text-sm text-muted-foreground">{uploadProgress}%</p>
                       </div>
                     </>
                   ) : audioId ? (
                     <>
                       <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
-                        <AudioWaveform className="w-8 h-8 text-green-400" />
+                        <AudioWaveform className="w-8 h-8 text-green-500" />
                       </div>
                       <div className="space-y-2">
-                        <p className="text-lg font-medium text-green-400">✓ Upload thành công!</p>
-                        <p className="text-sm text-slate-300">{audioFileName}</p>
-                        <p className="text-xs text-slate-500">Click để chọn file khác</p>
+                        <p className="text-lg font-medium text-green-500">✓ Upload thành công!</p>
+                        <p className="text-sm text-card-foreground">{audioFileName}</p>
+                        <p className="text-xs text-muted-foreground">Click để chọn file khác</p>
                       </div>
                     </>
                   ) : (
                     <>
                       <div className="w-16 h-16 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                        <Upload className="w-8 h-8 text-cyan-400" />
+                        <Upload className="w-8 h-8 text-cyan-500" />
                       </div>
                       <div className="space-y-2">
-                        <p className="text-lg font-medium text-slate-200">
+                        <p className="text-lg font-medium text-card-foreground">
                           Kéo thả file vào đây
                         </p>
-                        <p className="text-sm text-slate-400">
+                        <p className="text-sm text-muted-foreground">
                           hoặc click để chọn file
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                           Hỗ trợ: MP3, WAV, M4A, FLAC, MP4, AVI, MOV, v.v.
                         </p>
                       </div>
@@ -450,20 +456,20 @@ const AudioEditor = () => {
 
         {/* Waveform and Editor */}
         {audioFile && (
-          <Card className="mb-8 bg-slate-800/50 border-slate-700/50 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <Card className="mb-8 bg-card/80 backdrop-blur-sm shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500">
             <CardHeader>
-              <CardTitle className="text-2xl text-slate-100">Audio Editor</CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardTitle className="text-2xl text-card-foreground">Audio Editor</CardTitle>
+              <CardDescription>
                 Chỉnh sửa audio với các công cụ chuyên nghiệp
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Waveform Visualization */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium text-slate-300">Waveform</Label>
+                <Label className="text-sm font-medium text-card-foreground">Waveform</Label>
                 <div
                   ref={waveformRef}
-                  className="bg-slate-900/50 rounded-lg border border-slate-700 p-4"
+                  className="bg-muted/50 rounded-lg border border-border p-4"
                 />
 
                 {/* Playback Controls */}
@@ -480,28 +486,28 @@ const AudioEditor = () => {
                         <Play className="w-4 h-4" />
                       )}
                     </Button>
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm text-muted-foreground">
                       {formatTime(currentTime)} / {formatTime(audioDuration)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Volume2 className="w-4 h-4 text-slate-400" />
+                    <Volume2 className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </div>
               </div>
 
               {/* Output Format Settings */}
-              <div className="space-y-4 pt-4 border-t border-slate-700">
-                <Label className="text-sm font-medium text-slate-300">Định dạng Output</Label>
+              <div className="space-y-4 pt-4 border-t border-border">
+                <Label className="text-sm font-medium text-card-foreground">Định dạng Output</Label>
 
                 <div className="grid grid-cols-2 gap-4">
                   {/* Codec Selection */}
                   <div className="space-y-2">
-                    <Label className="text-xs text-slate-400">Audio Codec</Label>
+                    <Label className="text-xs text-muted-foreground">Audio Codec</Label>
                     <select
                       value={editOptions.codec}
                       onChange={(e) => setEditOptions({...editOptions, codec: e.target.value})}
-                      className="w-full h-10 px-3 rounded-md bg-slate-900/50 border border-slate-600 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      className="w-full h-10 px-3 rounded-md bg-background border border-input text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
                     >
                       <option value="mp3">MP3</option>
                       <option value="m4a">M4A (AAC)</option>
@@ -514,11 +520,11 @@ const AudioEditor = () => {
                   {/* Bitrate Selection - Only for lossy formats */}
                   {!['flac', 'wav'].includes(editOptions.codec) && (
                     <div className="space-y-2">
-                      <Label className="text-xs text-slate-400">Bitrate</Label>
+                      <Label className="text-xs text-muted-foreground">Bitrate</Label>
                       <select
                         value={editOptions.bitrate}
                         onChange={(e) => setEditOptions({...editOptions, bitrate: e.target.value})}
-                        className="w-full h-10 px-3 rounded-md bg-slate-900/50 border border-slate-600 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        className="w-full h-10 px-3 rounded-md bg-background border border-input text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
                       >
                         <option value="96k">96 kbps</option>
                         <option value="128k">128 kbps</option>
@@ -529,7 +535,7 @@ const AudioEditor = () => {
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {['flac', 'wav'].includes(editOptions.codec)
                     ? 'Format lossless - giữ nguyên chất lượng gốc'
                     : 'Chọn codec và bitrate cho file output'}
@@ -537,40 +543,38 @@ const AudioEditor = () => {
               </div>
 
               {/* Trim Options */}
-              <div className="space-y-4 pt-4 border-t border-slate-700">
+              <div className="space-y-4 pt-4 border-t border-border">
                 <div className="flex items-center gap-2">
-                  <Scissors className="w-4 h-4 text-slate-300" />
-                  <Label className="text-sm font-medium text-slate-300">Cắt Audio (Trim)</Label>
+                  <Scissors className="w-4 h-4 text-card-foreground" />
+                  <Label className="text-sm font-medium text-card-foreground">Cắt Audio (Trim)</Label>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-xs text-slate-400">Trim Start (HH:MM:SS)</Label>
+                    <Label className="text-xs text-muted-foreground">Trim Start (HH:MM:SS)</Label>
                     <Input
                       type="text"
                       placeholder="00:00:00"
                       value={editOptions.trimStart}
                       onChange={(e) => setEditOptions({...editOptions, trimStart: e.target.value})}
-                      className="bg-slate-900/50 border-slate-600 text-slate-100"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs text-slate-400">Trim End (HH:MM:SS)</Label>
+                    <Label className="text-xs text-muted-foreground">Trim End (HH:MM:SS)</Label>
                     <Input
                       type="text"
                       placeholder="00:00:00"
                       value={editOptions.trimEnd}
                       onChange={(e) => setEditOptions({...editOptions, trimEnd: e.target.value})}
-                      className="bg-slate-900/50 border-slate-600 text-slate-100"
                     />
                   </div>
                 </div>
-                <p className="text-xs text-slate-500">Để trống = giữ nguyên đầu/cuối</p>
+                <p className="text-xs text-muted-foreground">Để trống = giữ nguyên đầu/cuối</p>
               </div>
 
               {/* Fade Options */}
-              <div className="space-y-4 pt-4 border-t border-slate-700">
-                <Label className="text-sm font-medium text-slate-300">Hiệu ứng Fade (Mờ dần)</Label>
+              <div className="space-y-4 pt-4 border-t border-border">
+                <Label className="text-sm font-medium text-card-foreground">Hiệu ứng Fade (Mờ dần)</Label>
 
                 {/* Fade In */}
                 <div className="flex items-start space-x-3">
@@ -580,12 +584,12 @@ const AudioEditor = () => {
                     onCheckedChange={(checked) => setEditOptions({...editOptions, enableFadeIn: checked})}
                   />
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="enableFadeIn" className="text-sm text-slate-300 cursor-pointer">
+                    <Label htmlFor="enableFadeIn" className="text-sm text-card-foreground cursor-pointer">
                       Fade In - Âm thanh từ nhỏ đến to dần ở đầu
                     </Label>
                     {editOptions.enableFadeIn && (
                       <div className="flex items-center gap-3">
-                        <Label className="text-xs text-slate-400 whitespace-nowrap">Thời gian:</Label>
+                        <Label className="text-xs text-muted-foreground whitespace-nowrap">Thời gian:</Label>
                         <Slider
                           value={[editOptions.fadeInDuration]}
                           onValueChange={([value]) => setEditOptions({...editOptions, fadeInDuration: value})}
@@ -594,7 +598,7 @@ const AudioEditor = () => {
                           step={0.5}
                           className="flex-1"
                         />
-                        <span className="text-xs text-slate-400 min-w-[3rem]">{editOptions.fadeInDuration}s</span>
+                        <span className="text-xs text-muted-foreground min-w-[3rem]">{editOptions.fadeInDuration}s</span>
                       </div>
                     )}
                   </div>
@@ -608,12 +612,12 @@ const AudioEditor = () => {
                     onCheckedChange={(checked) => setEditOptions({...editOptions, enableFadeOut: checked})}
                   />
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor="enableFadeOut" className="text-sm text-slate-300 cursor-pointer">
+                    <Label htmlFor="enableFadeOut" className="text-sm text-card-foreground cursor-pointer">
                       Fade Out - Âm thanh từ to đến nhỏ dần ở cuối
                     </Label>
                     {editOptions.enableFadeOut && (
                       <div className="flex items-center gap-3">
-                        <Label className="text-xs text-slate-400 whitespace-nowrap">Thời gian:</Label>
+                        <Label className="text-xs text-muted-foreground whitespace-nowrap">Thời gian:</Label>
                         <Slider
                           value={[editOptions.fadeOutDuration]}
                           onValueChange={([value]) => setEditOptions({...editOptions, fadeOutDuration: value})}
@@ -622,7 +626,7 @@ const AudioEditor = () => {
                           step={0.5}
                           className="flex-1"
                         />
-                        <span className="text-xs text-slate-400 min-w-[3rem]">{editOptions.fadeOutDuration}s</span>
+                        <span className="text-xs text-muted-foreground min-w-[3rem]">{editOptions.fadeOutDuration}s</span>
                       </div>
                     )}
                   </div>
@@ -630,7 +634,7 @@ const AudioEditor = () => {
               </div>
 
               {/* Cut Middle Section */}
-              <div className="space-y-4 pt-4 border-t border-slate-700">
+              <div className="space-y-4 pt-4 border-t border-border">
                 <div className="flex items-start space-x-3">
                   <Checkbox
                     id="enableCutMiddle"
@@ -638,7 +642,7 @@ const AudioEditor = () => {
                     onCheckedChange={(checked) => setEditOptions({...editOptions, enableCutMiddle: checked})}
                   />
                   <div className="flex-1 space-y-3">
-                    <Label htmlFor="enableCutMiddle" className="text-sm font-medium text-slate-300 cursor-pointer">
+                    <Label htmlFor="enableCutMiddle" className="text-sm font-medium text-card-foreground cursor-pointer">
                       Cắt bỏ đoạn giữa
                     </Label>
 
@@ -646,23 +650,23 @@ const AudioEditor = () => {
                       <>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-2">
-                            <Label className="text-xs text-slate-400">Bắt đầu cắt (HH:MM:SS)</Label>
+                            <Label className="text-xs text-muted-foreground">Bắt đầu cắt (HH:MM:SS)</Label>
                             <Input
                               type="text"
                               placeholder="00:02:00"
                               value={editOptions.cutMiddleStart}
                               onChange={(e) => setEditOptions({...editOptions, cutMiddleStart: e.target.value})}
-                              className="bg-slate-900/50 border-slate-600 text-slate-100 h-9"
+                              className="h-9"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-xs text-slate-400">Kết thúc cắt (HH:MM:SS)</Label>
+                            <Label className="text-xs text-muted-foreground">Kết thúc cắt (HH:MM:SS)</Label>
                             <Input
                               type="text"
                               placeholder="00:03:00"
                               value={editOptions.cutMiddleEnd}
                               onChange={(e) => setEditOptions({...editOptions, cutMiddleEnd: e.target.value})}
-                              className="bg-slate-900/50 border-slate-600 text-slate-100 h-9"
+                              className="h-9"
                             />
                           </div>
                         </div>
@@ -675,12 +679,12 @@ const AudioEditor = () => {
                             onCheckedChange={(checked) => setEditOptions({...editOptions, enableCrossfade: checked})}
                           />
                           <div className="flex-1 space-y-2">
-                            <Label htmlFor="enableCrossfade" className="text-xs text-slate-300 cursor-pointer">
+                            <Label htmlFor="enableCrossfade" className="text-xs text-card-foreground cursor-pointer">
                               Crossfade khi nối (mượt mà hơn)
                             </Label>
                             {editOptions.enableCrossfade && (
                               <div className="flex items-center gap-3">
-                                <Label className="text-xs text-slate-400 whitespace-nowrap">Thời gian:</Label>
+                                <Label className="text-xs text-muted-foreground whitespace-nowrap">Thời gian:</Label>
                                 <Slider
                                   value={[editOptions.crossfadeDuration]}
                                   onValueChange={([value]) => setEditOptions({...editOptions, crossfadeDuration: value})}
@@ -689,13 +693,13 @@ const AudioEditor = () => {
                                   step={0.5}
                                   className="flex-1"
                                 />
-                                <span className="text-xs text-slate-400 min-w-[3rem]">{editOptions.crossfadeDuration}s</span>
+                                <span className="text-xs text-muted-foreground min-w-[3rem]">{editOptions.crossfadeDuration}s</span>
                               </div>
                             )}
                           </div>
                         </div>
 
-                        <div className="text-xs text-slate-400 bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
+                        <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg border border-border">
                           💡 Ví dụ: Bắt đầu = 00:02:00, Kết thúc = 00:03:00 → Giữ đoạn 0-2 phút và đoạn sau 3 phút, bỏ 1 phút ở giữa
                         </div>
                       </>
@@ -706,7 +710,7 @@ const AudioEditor = () => {
 
               {/* Info message if audio not uploaded yet */}
               {!audioId && (
-                <div className="text-sm text-amber-400 bg-amber-500/10 p-3 rounded-lg border border-amber-500/30 flex items-start gap-2">
+                <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-500/10 p-3 rounded-lg border border-amber-500/30 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>
                     Vui lòng upload file audio ở phía trên trước khi xử lý
@@ -740,10 +744,10 @@ const AudioEditor = () => {
               {processing && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-300">Đang xử lý audio...</span>
-                    <span className="text-slate-400">{processingProgress}%</span>
+                    <span className="text-card-foreground">Đang xử lý audio...</span>
+                    <span className="text-muted-foreground">{processingProgress}%</span>
                   </div>
-                  <Progress value={processingProgress} className="h-2 bg-slate-700" />
+                  <Progress value={processingProgress} className="h-2" />
                 </div>
               )}
             </CardContent>

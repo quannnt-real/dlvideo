@@ -65,6 +65,9 @@ export const AuthProvider = ({ children }) => {
           expiresAt: data.expires_at,
         });
         setSessionToken(data.session_token);
+        
+        // Save token to localStorage for axios interceptor
+        localStorage.setItem('session_token', data.session_token);
 
         return {
           success: true,
@@ -96,6 +99,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setUser(null);
       setSessionToken(null);
+      localStorage.removeItem('session_token');
     }
   };
 

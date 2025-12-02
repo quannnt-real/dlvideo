@@ -72,13 +72,15 @@ async def login(request: LoginRequest, response: Response, http_request: Request
 
     if result["success"]:
         # Set session cookie (HttpOnly for security)
+        # Note: For localhost cross-origin, we use Lax but disable httponly temporarily
         response.set_cookie(
             key="session_token",
             value=result["session_token"],
-            httponly=True,
+            httponly=False,  # Must be False for localhost cross-origin
             secure=False,  # Set to True in production with HTTPS
             samesite="lax",
-            max_age=24 * 60 * 60  # 24 hours
+            max_age=24 * 60 * 60,  # 24 hours
+            path="/"
         )
 
         # Update session with IP

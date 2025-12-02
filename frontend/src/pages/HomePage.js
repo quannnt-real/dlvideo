@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Download, Loader2, Video, CheckCircle2, AlertCircle, Music, Settings, AudioWaveform, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { ThemeToggleSimple } from "@/components/ThemeToggle";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -155,6 +156,22 @@ const HomePage = () => {
       console.log('File extension:', fileExtension);
       console.log('Video info:', videoInfo);
       console.log('Original title:', videoInfo?.title);
+      console.log('Selected format:', selectedFormat);
+      
+      // Get selected format info to add quality to filename
+      const selectedFormatInfo = videoInfo?.formats?.find(f => f.format_id === selectedFormat);
+      const qualityLabel = selectedFormatInfo?.quality || '';
+      // Clean quality label for filename (remove special chars, keep resolution)
+      const cleanQuality = qualityLabel
+        .replace(/[()]/g, '')
+        .replace(/\s+/g, '_')
+        .replace(/có_âm_thanh/g, '')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '')
+        .trim();
+      
+      console.log('Quality label:', qualityLabel);
+      console.log('Clean quality:', cleanQuality);
       
       // Create clean filename from video title
       const originalTitle = videoInfo?.title || 'video';
@@ -166,9 +183,14 @@ const HomePage = () => {
         .trim()
         .replace(/\s+/g, '_')  // Replace spaces with underscore
         .toLowerCase()
-        .substring(0, 100);  // Limit length
+        .substring(0, 80);  // Limit length (shorter to make room for quality)
       
-      const downloadFilename = cleanTitle ? `${cleanTitle}${fileExtension}` : `video${fileExtension}`;
+      // Add quality to filename
+      const filenameWithQuality = cleanQuality 
+        ? `${cleanTitle}_${cleanQuality}${fileExtension}`
+        : `${cleanTitle}${fileExtension}`;
+      
+      const downloadFilename = cleanTitle ? filenameWithQuality : `video${fileExtension}`;
       
       console.log('Clean title:', cleanTitle);
       console.log('Download filename:', downloadFilename);
@@ -237,28 +259,31 @@ const HomePage = () => {
   };
 
   return (
-    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <div className="max-w-4xl mx-auto">
         {/* User Info Header */}
-        <div className="flex justify-between items-center mb-6 p-4 bg-slate-800/50 border border-slate-700/50 rounded-lg backdrop-blur-sm">
+        <div className="flex justify-between items-center mb-6 p-4 bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/50 rounded-lg backdrop-blur-sm shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-              <Shield className="w-5 h-5 text-blue-400" />
+            <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
+              <Shield className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-slate-400">Đăng nhập với tư cách</p>
-              <p className="font-semibold text-slate-100">
-                {user?.username} {isAdmin && <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded ml-2">Admin</span>}
+              <p className="text-sm text-muted-foreground">Đăng nhập với tư cách</p>
+              <p className="font-semibold text-foreground">
+                {user?.username} {isAdmin && <span className="text-xs bg-purple-500/20 text-purple-600 dark:text-purple-300 px-2 py-1 rounded ml-2">Admin</span>}
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            <ThemeToggleSimple />
+            
             {isAdmin && (
               <Button
                 onClick={() => navigate('/admin')}
                 variant="outline"
                 size="sm"
-                className="border-purple-500/50 text-purple-300 hover:bg-purple-500/10"
+                className="border-purple-500/50 text-purple-600 dark:text-purple-300 hover:bg-purple-500/10"
               >
                 <Shield className="w-4 h-4 mr-2" />
                 Admin Panel
@@ -268,7 +293,7 @@ const HomePage = () => {
               onClick={logout}
               variant="outline"
               size="sm"
-              className="border-red-500/50 text-red-300 hover:bg-red-500/10"
+              className="border-red-500/50 text-red-600 dark:text-red-300 hover:bg-red-500/10"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Đăng xuất
@@ -280,7 +305,7 @@ const HomePage = () => {
         <div className="flex justify-center gap-4 mb-8">
           <Button
             variant="default"
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Video className="w-4 h-4 mr-2" />
             Video Downloader
@@ -288,7 +313,7 @@ const HomePage = () => {
           <Link to="/audio-editor">
             <Button
               variant="outline"
-              className="border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+              className="border-border text-foreground hover:bg-accent"
             >
               <AudioWaveform className="w-4 h-4 mr-2" />
               Audio Editor
@@ -299,23 +324,23 @@ const HomePage = () => {
         {/* Header */}
         <div className="text-center mb-12" data-testid="header-section">
           <div className="flex items-center justify-center mb-6">
-            <div className="p-4 bg-blue-500/10 rounded-2xl border border-blue-500/20 backdrop-blur-sm">
-              <Video className="w-12 h-12 text-blue-400" />
+            <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 backdrop-blur-sm">
+              <Video className="w-12 h-12 text-primary" />
             </div>
           </div>
-          <h1 className="text-5xl sm:text-6xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent" data-testid="main-title">
+          <h1 className="text-5xl sm:text-6xl font-bold mb-4 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 bg-clip-text text-transparent" data-testid="main-title">
             Video Downloader Pro
           </h1>
-          <p className="text-lg text-slate-400 max-w-2xl mx-auto" data-testid="main-description">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto" data-testid="main-description">
             Tải video chất lượng cao từ YouTube, TikTok, Vimeo và hơn 1000+ nền tảng khác
           </p>
         </div>
 
         {/* URL Input Card */}
-        <Card className="mb-8 bg-slate-800/50 border-slate-700/50 backdrop-blur-sm" data-testid="url-input-card">
+        <Card className="mb-8 bg-card/80 backdrop-blur-sm shadow-lg" data-testid="url-input-card">
           <CardHeader>
-            <CardTitle className="text-2xl text-slate-100" data-testid="input-card-title">Nhập URL Video</CardTitle>
-            <CardDescription className="text-slate-400" data-testid="input-card-description">
+            <CardTitle className="text-2xl text-card-foreground" data-testid="input-card-title">Nhập URL Video</CardTitle>
+            <CardDescription data-testid="input-card-description">
               Dán liên kết video bạn muốn tải xuống
             </CardDescription>
           </CardHeader>
@@ -328,14 +353,14 @@ const HomePage = () => {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
-                className="flex-1 bg-slate-900/50 border-slate-600 text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:ring-blue-500/20"
+                className="flex-1"
                 disabled={loading || downloading}
               />
               <Button
                 data-testid="analyze-button"
                 onClick={handleAnalyze}
                 disabled={loading || downloading}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 transition-all duration-200 hover:scale-105"
+                className="px-8 transition-all duration-200 hover:scale-105"
               >
                 {loading ? (
                   <>
@@ -352,7 +377,7 @@ const HomePage = () => {
 
         {/* Video Info Card */}
         {videoInfo && (
-          <Card className="mb-8 bg-slate-800/50 border-slate-700/50 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4 duration-500" data-testid="video-info-card">
+          <Card className="mb-8 bg-card/80 backdrop-blur-sm shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-500" data-testid="video-info-card">
             <CardContent className="p-6">
               <div className="flex gap-6 mb-6">
                 {videoInfo.thumbnail && (
@@ -360,23 +385,23 @@ const HomePage = () => {
                     data-testid="video-thumbnail"
                     src={videoInfo.thumbnail}
                     alt={videoInfo.title}
-                    className="w-48 h-auto rounded-lg border border-slate-600 shadow-lg"
+                    className="w-48 h-auto rounded-lg border border-border shadow-lg"
                   />
                 )}
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-slate-100 mb-3" data-testid="video-title">
+                  <h3 className="text-xl font-semibold text-card-foreground mb-3" data-testid="video-title">
                     {videoInfo.title}
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2">
-                      <span className="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full border border-blue-500/30" data-testid="video-source">
+                      <span className="px-3 py-1 bg-primary/20 text-primary rounded-full border border-primary/30" data-testid="video-source">
                         {videoInfo.source}
                       </span>
-                      <span className="text-slate-400" data-testid="video-duration">
+                      <span className="text-muted-foreground" data-testid="video-duration">
                         Thời lượng: {formatDuration(videoInfo.duration)}
                       </span>
                     </div>
-                    <p className="text-slate-400" data-testid="available-formats">
+                    <p className="text-muted-foreground" data-testid="available-formats">
                       Có sẵn {videoInfo.formats.length} định dạng chất lượng
                     </p>
                   </div>
@@ -385,7 +410,7 @@ const HomePage = () => {
 
               {/* Download Type Selection */}
               <div className="space-y-4">
-                <label className="text-sm font-medium text-slate-300">
+                <label className="text-sm font-medium text-card-foreground">
                   Loại tải xuống:
                 </label>
                 <RadioGroup
@@ -397,20 +422,20 @@ const HomePage = () => {
                   className="flex gap-6"
                 >
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="video" id="video" className="border-slate-600 text-blue-500" />
+                    <RadioGroupItem value="video" id="video" />
                     <Label
                       htmlFor="video"
-                      className="flex items-center gap-2 text-slate-100 cursor-pointer hover:text-blue-400 transition-colors"
+                      className="flex items-center gap-2 text-card-foreground cursor-pointer hover:text-primary transition-colors"
                     >
                       <Video className="w-4 h-4" />
                       Video (MP4)
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="audio" id="audio" className="border-slate-600 text-blue-500" />
+                    <RadioGroupItem value="audio" id="audio" />
                     <Label
                       htmlFor="audio"
-                      className="flex items-center gap-2 text-slate-100 cursor-pointer hover:text-blue-400 transition-colors"
+                      className="flex items-center gap-2 text-card-foreground cursor-pointer hover:text-primary transition-colors"
                     >
                       <Music className="w-4 h-4" />
                       Audio (MP3)
@@ -421,14 +446,14 @@ const HomePage = () => {
 
               {/* Format/Quality Selection */}
               <div className="space-y-4 mt-4">
-                <label className="text-sm font-medium text-slate-300" data-testid="quality-label">
+                <label className="text-sm font-medium text-card-foreground" data-testid="quality-label">
                   {downloadType === "audio" ? "Chọn chất lượng audio:" : "Chọn chất lượng video:"}
                 </label>
                 <Select value={selectedFormat} onValueChange={setSelectedFormat}>
-                  <SelectTrigger data-testid="quality-selector" className="bg-slate-900/50 border-slate-600 text-slate-100">
+                  <SelectTrigger data-testid="quality-selector" className="bg-background border-input text-foreground">
                     <SelectValue placeholder="Chọn chất lượng..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700 max-h-80">
+                  <SelectContent className="bg-popover border-border max-h-80">
                     {videoInfo.formats
                       .filter(format => {
                         // Filter based on download type
@@ -443,11 +468,11 @@ const HomePage = () => {
                           key={format.format_id}
                           value={format.format_id}
                           data-testid={`quality-option-${format.quality}`}
-                          className="text-slate-100 hover:bg-slate-800 focus:bg-slate-800"
+                          className="text-popover-foreground hover:bg-accent focus:bg-accent"
                         >
                           <div className="flex justify-between items-center w-full gap-3">
                             <span className="font-medium">{format.quality}</span>
-                            <span className="text-slate-400 text-sm">
+                            <span className="text-muted-foreground text-sm">
                               {format.resolution && `${format.resolution} • `}{format.filesize}
                             </span>
                           </div>
@@ -458,8 +483,8 @@ const HomePage = () => {
 
                 {/* Info message for audio download */}
                 {downloadType === "audio" && (
-                  <div className="text-xs text-slate-400 bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-400" />
+                  <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg border border-border flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
                     <span>
                       Audio sẽ được tải về và xử lý bằng FFmpeg với các tùy chọn cơ bản bên dưới. Để cắt/chỉnh sửa audio nâng cao, hãy sử dụng Audio Editor sau khi tải về.
                     </span>
@@ -470,8 +495,8 @@ const HomePage = () => {
               {/* Advanced Audio Options */}
               {downloadType === "audio" && (
                 <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="audio-options" className="border-slate-700">
-                    <AccordionTrigger className="text-slate-300 hover:text-slate-100">
+                  <AccordionItem value="audio-options" className="border-border">
+                    <AccordionTrigger className="text-card-foreground hover:text-primary">
                       <div className="flex items-center gap-2">
                         <Settings className="w-4 h-4" />
                         <span>Tùy chọn Audio nâng cao</span>
@@ -480,29 +505,29 @@ const HomePage = () => {
                     <AccordionContent className="space-y-6 pt-4">
                       {/* Audio Codec */}
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium text-slate-300">Audio Codec</Label>
+                        <Label className="text-sm font-medium text-card-foreground">Audio Codec</Label>
                         <Select
                           value={audioOptions.codec}
                           onValueChange={(value) => setAudioOptions({...audioOptions, codec: value})}
                         >
-                          <SelectTrigger className="bg-slate-900/50 border-slate-600 text-slate-100">
+                          <SelectTrigger className="bg-background border-input text-foreground">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-slate-900 border-slate-700">
+                          <SelectContent className="bg-popover border-border">
                             <SelectItem value="mp3">MP3</SelectItem>
                             <SelectItem value="m4a">M4A (AAC)</SelectItem>
                             <SelectItem value="opus">Opus</SelectItem>
                             <SelectItem value="copy">Copy (Giữ nguyên codec gốc)</SelectItem>
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-slate-500">Chọn định dạng audio output</p>
+                        <p className="text-xs text-muted-foreground">Chọn định dạng audio output</p>
                       </div>
 
                       {/* Audio Qscale (VBR) - Only for MP3 */}
                       {audioOptions.codec === "mp3" && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <Label className="text-sm font-medium text-slate-300">
+                            <Label className="text-sm font-medium text-card-foreground">
                               Audio Quality (VBR) - Qscale: {audioOptions.qscale !== null ? audioOptions.qscale : "Off"}
                             </Label>
                             <Button
@@ -527,7 +552,7 @@ const HomePage = () => {
                                 step={1}
                                 className="w-full"
                               />
-                              <p className="text-xs text-slate-500">
+                              <p className="text-xs text-muted-foreground">
                                 0 = Chất lượng cao nhất, 9 = Thấp nhất. VBR điều chỉnh bitrate tự động.
                               </p>
                             </>
@@ -538,15 +563,15 @@ const HomePage = () => {
                       {/* Audio Bitrate (CBR) - Only when qscale is off */}
                       {audioOptions.codec !== "copy" && audioOptions.qscale === null && (
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-slate-300">Audio Bitrate (CBR)</Label>
+                          <Label className="text-sm font-medium text-card-foreground">Audio Bitrate (CBR)</Label>
                           <Select
                             value={audioOptions.bitrate}
                             onValueChange={(value) => setAudioOptions({...audioOptions, bitrate: value})}
                           >
-                            <SelectTrigger className="bg-slate-900/50 border-slate-600 text-slate-100">
+                            <SelectTrigger className="bg-background border-input text-foreground">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-slate-900 border-slate-700">
+                            <SelectContent className="bg-popover border-border">
                               <SelectItem value="64k">64 kbps</SelectItem>
                               <SelectItem value="96k">96 kbps</SelectItem>
                               <SelectItem value="128k">128 kbps</SelectItem>
@@ -555,14 +580,14 @@ const HomePage = () => {
                               <SelectItem value="320k">320 kbps (Cao nhất)</SelectItem>
                             </SelectContent>
                           </Select>
-                          <p className="text-xs text-slate-500">Bitrate cố định - cao hơn = chất lượng tốt hơn</p>
+                          <p className="text-xs text-muted-foreground">Bitrate cố định - cao hơn = chất lượng tốt hơn</p>
                         </div>
                       )}
 
                       {/* Channels */}
                       {audioOptions.codec !== "copy" && (
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-slate-300">Channels</Label>
+                          <Label className="text-sm font-medium text-card-foreground">Channels</Label>
                           <RadioGroup
                             value={audioOptions.channels}
                             onValueChange={(value) => setAudioOptions({...audioOptions, channels: value})}
@@ -570,21 +595,21 @@ const HomePage = () => {
                           >
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="mono" id="mono" />
-                              <Label htmlFor="mono" className="cursor-pointer text-slate-300">Mono (1 kênh)</Label>
+                              <Label htmlFor="mono" className="cursor-pointer text-card-foreground">Mono (1 kênh)</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                               <RadioGroupItem value="stereo" id="stereo" />
-                              <Label htmlFor="stereo" className="cursor-pointer text-slate-300">Stereo (2 kênh)</Label>
+                              <Label htmlFor="stereo" className="cursor-pointer text-card-foreground">Stereo (2 kênh)</Label>
                             </div>
                           </RadioGroup>
-                          <p className="text-xs text-slate-500">Số lượng kênh âm thanh</p>
+                          <p className="text-xs text-muted-foreground">Số lượng kênh âm thanh</p>
                         </div>
                       )}
 
                       {/* Volume */}
                       {audioOptions.codec !== "copy" && (
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-slate-300">
+                          <Label className="text-sm font-medium text-card-foreground">
                             Volume: {audioOptions.volume}%
                           </Label>
                           <Slider
@@ -595,7 +620,7 @@ const HomePage = () => {
                             step={5}
                             className="w-full"
                           />
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-muted-foreground">
                             100% = Giữ nguyên, &lt;100% = Nhỏ hơn, &gt;100% = To hơn
                           </p>
                         </div>
@@ -604,22 +629,22 @@ const HomePage = () => {
                       {/* Sample Rate */}
                       {audioOptions.codec !== "copy" && (
                         <div className="space-y-2">
-                          <Label className="text-sm font-medium text-slate-300">Sample Rate (Hz)</Label>
+                          <Label className="text-sm font-medium text-card-foreground">Sample Rate (Hz)</Label>
                           <Select
                             value={audioOptions.sampleRate}
                             onValueChange={(value) => setAudioOptions({...audioOptions, sampleRate: value})}
                           >
-                            <SelectTrigger className="bg-slate-900/50 border-slate-600 text-slate-100">
+                            <SelectTrigger className="bg-background border-input text-foreground">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-slate-900 border-slate-700">
+                            <SelectContent className="bg-popover border-border">
                               <SelectItem value="22050">22050 Hz</SelectItem>
                               <SelectItem value="44100">44100 Hz (CD Quality)</SelectItem>
                               <SelectItem value="48000">48000 Hz (Pro Audio)</SelectItem>
                               <SelectItem value="96000">96000 Hz (Hi-Res)</SelectItem>
                             </SelectContent>
                           </Select>
-                          <p className="text-xs text-slate-500">Tần số lấy mẫu âm thanh</p>
+                          <p className="text-xs text-muted-foreground">Tần số lấy mẫu âm thanh</p>
                         </div>
                       )}
                     </AccordionContent>
@@ -651,17 +676,17 @@ const HomePage = () => {
               {downloading && (
                 <div className="mt-6 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300" data-testid="progress-section">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-300 flex items-center gap-2" data-testid="download-status">
+                    <span className="text-card-foreground flex items-center gap-2" data-testid="download-status">
                       {progress === 100 ? (
-                        <CheckCircle2 className="w-4 h-4 text-green-400" />
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
                       ) : (
-                        <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
                       )}
                       {downloadStatus}
                     </span>
-                    <span className="text-slate-400" data-testid="progress-percentage">{progress}%</span>
+                    <span className="text-muted-foreground" data-testid="progress-percentage">{progress}%</span>
                   </div>
-                  <Progress value={progress} className="h-2 bg-slate-700" data-testid="progress-bar" />
+                  <Progress value={progress} className="h-2" data-testid="progress-bar" />
                 </div>
               )}
             </CardContent>
@@ -670,35 +695,35 @@ const HomePage = () => {
 
         {/* Features Info */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12" data-testid="features-section">
-          <Card className="bg-slate-800/30 border-slate-700/30 backdrop-blur-sm hover:border-blue-500/30 transition-all duration-300">
+          <Card className="bg-card/30 border-border/30 backdrop-blur-sm hover:border-primary/30 transition-all duration-300">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Video className="w-6 h-6 text-blue-400" />
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Video className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-slate-100 mb-2">Chất lượng cao</h3>
-              <p className="text-sm text-slate-400">
+              <h3 className="font-semibold text-card-foreground mb-2">Chất lượng cao</h3>
+              <p className="text-sm text-muted-foreground">
                 Tải video với độ phân giải tối đa có sẵn
               </p>
             </CardContent>
           </Card>
-          <Card className="bg-slate-800/30 border-slate-700/30 backdrop-blur-sm hover:border-cyan-500/30 transition-all duration-300">
+          <Card className="bg-card/30 border-border/30 backdrop-blur-sm hover:border-cyan-500/30 transition-all duration-300">
             <CardContent className="p-6 text-center">
               <div className="w-12 h-12 bg-cyan-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-6 h-6 text-cyan-400" />
+                <CheckCircle2 className="w-6 h-6 text-cyan-500" />
               </div>
-              <h3 className="font-semibold text-slate-100 mb-2">Đa nền tảng</h3>
-              <p className="text-sm text-slate-400">
+              <h3 className="font-semibold text-card-foreground mb-2">Đa nền tảng</h3>
+              <p className="text-sm text-muted-foreground">
                 Hỗ trợ hơn 1000+ trang web video
               </p>
             </CardContent>
           </Card>
-          <Card className="bg-slate-800/30 border-slate-700/30 backdrop-blur-sm hover:border-blue-500/30 transition-all duration-300">
+          <Card className="bg-card/30 border-border/30 backdrop-blur-sm hover:border-primary/30 transition-all duration-300">
             <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Download className="w-6 h-6 text-blue-400" />
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Download className="w-6 h-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-slate-100 mb-2">Tải nhanh</h3>
-              <p className="text-sm text-slate-400">
+              <h3 className="font-semibold text-card-foreground mb-2">Tải nhanh</h3>
+              <p className="text-sm text-muted-foreground">
                 Tốc độ tải xuống nhanh chóng và ổn định
               </p>
             </CardContent>

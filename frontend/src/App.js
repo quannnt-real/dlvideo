@@ -7,6 +7,7 @@ import LoginPage from "@/pages/LoginPage";
 import AdminPanel from "@/pages/AdminPanel";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -54,45 +55,47 @@ function AdminRoute({ children }) {
 
 function App() {
   return (
-    <div className="App">
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            {/* Public route */}
-            <Route path="/login" element={<LoginPage />} />
+    <ThemeProvider>
+      <div className="App min-h-screen bg-background text-foreground">
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              {/* Public route */}
+              <Route path="/login" element={<LoginPage />} />
 
-            {/* Protected routes - Require authentication */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <HomePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/audio-editor"
-              element={
-                <ProtectedRoute>
-                  <AudioEditor />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected routes - Require authentication */}
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <HomePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/audio-editor"
+                element={
+                  <ProtectedRoute>
+                    <AudioEditor />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Admin only route */}
-            <Route
-              path="/admin"
-              element={
-                <AdminRoute>
-                  <AdminPanel />
-                </AdminRoute>
-              }
-            />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-      <Toaster position="top-center" />
-    </div>
+              {/* Admin only route */}
+              <Route
+                path="/admin"
+                element={
+                  <AdminRoute>
+                    <AdminPanel />
+                  </AdminRoute>
+                }
+              />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+        <Toaster position="top-center" />
+      </div>
+    </ThemeProvider>
   );
 }
 
